@@ -1,0 +1,45 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus
+data:
+  # Adapted from nyc-taxi's deployments/docker/prometheus/prometheus.yml --
+  # docker-compose hostnames replaced with in-cluster Service DNS. Job names
+  # are unchanged (nyc-taxi-consumer, clickhouse) since the etl_overview.json
+  # dashboard queries filter on job="nyc-taxi-consumer".
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+      evaluation_interval: 15s
+      scrape_timeout: 10s
+
+      external_labels:
+        environment: "eks"
+        pipeline: "nyc-taxi-etl"
+
+    scrape_configs:
+
+      # Prometheus self-monitoring
+      - job_name: "prometheus"
+        static_configs:
+          - targets: ["localhost:9090"]
+
+      # Consumer /metrics endpoint (Service in the etl namespace).
+      #
+      # No producer job here: producer runs as a one-shot Job with no
+      # stable Service (see kubernetes/producer), so there's nothing
+      # running long enough to scrape continuously.
+      - job_name: "nyc-taxi-consumer"
+        static_configs:
+          - targets: ["consumer.etl.svc.cluster.local:9101"]
+            labels:
+              component: "etl"
+              role: "consumer"
+
+      # ClickHouse native Prometheus endpoint (config.xml's <prometheus> block).
+      - job_name: "clickhouse"
+        metrics_path: /metrics
+        static_configs:
+          - targets: ["clickhouse.clickhouse.svc.cluster.local:9363"]
+            labels:
+              component: "clickhouse"
