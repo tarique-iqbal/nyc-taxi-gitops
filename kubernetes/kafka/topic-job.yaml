@@ -1,0 +1,38 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: kafka-topics
+  labels:
+    app.kubernetes.io/name: kafka-topics
+    app.kubernetes.io/part-of: nyc-taxi
+  annotations:
+    # Wait for the kafka StatefulSet (wave 0, the default) to be Healthy
+    # before creating topics -- kafka-topics.sh also self-waits via
+    # `cub kafka-ready`, this just avoids relying on that alone.
+    argocd.argoproj.io/sync-wave: "1"
+    # Job pod templates are immutable; Replace=true lets a kafka image bump
+    # delete+recreate this Job instead of failing to apply in place.
+    argocd.argoproj.io/sync-options: Replace=true
+spec:
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: kafka-topics
+    spec:
+      restartPolicy: Never
+      serviceAccountName: kafka
+      containers:
+        - name: kafka-topics
+          image: kafka:latest
+          command: ["/opt/kafka-topics.sh"]
+          env:
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              value: kafka.kafka.svc.cluster.local:9092
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi

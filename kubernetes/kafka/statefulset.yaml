@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: kafka
+  labels:
+    app.kubernetes.io/name: kafka
+    app.kubernetes.io/part-of: nyc-taxi
+spec:
+  serviceName: kafka-headless
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: kafka
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: kafka
+    spec:
+      serviceAccountName: kafka
+      containers:
+        - name: kafka
+          image: kafka:latest
+          # KRaft needs a unique numeric node ID per broker; derive it from
+          # the StatefulSet pod ordinal (kafka-0 -> 1, kafka-1 -> 2, ...)
+          # instead of hardcoding it in the ConfigMap.
+          command:
+            - sh
+            - -c
+            - |
+              export KAFKA_NODE_ID=$((${HOSTNAME##*-} + 1))
+              exec /etc/confluent/docker/run
+          envFrom:
+            - configMapRef:
+                name: kafka
+          ports:
+            - name: plaintext
+              containerPort: 9092
+            - name: controller
+              containerPort: 9093
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/kafka/data
+          startupProbe:
+            tcpSocket:
+              port: plaintext
+            failureThreshold: 30
+            periodSeconds: 5
+          livenessProbe:
+            tcpSocket:
+              port: plaintext
+            periodSeconds: 15
+          readinessProbe:
+            tcpSocket:
+              port: plaintext
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 500m
+              memory: 1Gi
+            limits:
+              cpu: 1500m
+              memory: 2Gi
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 10Gi

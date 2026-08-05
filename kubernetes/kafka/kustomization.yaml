@@ -1,0 +1,17 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: kafka
+
+resources:
+  - serviceaccount.yaml
+  - configmap.yaml
+  - headless-service.yaml
+  - service.yaml
+  - statefulset.yaml
+  - topic-job.yaml
+
+images:
+  - name: kafka
+    newName: kafka
+    newTag: latest
