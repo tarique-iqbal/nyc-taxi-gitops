@@ -1,0 +1,62 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: producer
+  labels:
+    app.kubernetes.io/name: producer
+    app.kubernetes.io/part-of: nyc-taxi
+  annotations:
+    # Job pod templates are immutable, so a plain `apply` fails on resync
+    # once the image tag changes. Replace=true tells Argo CD to
+    # `kubectl replace` instead, deleting and recreating the Job.
+    argocd.argoproj.io/sync-options: Replace=true
+spec:
+  backoffLimit: 2
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: producer
+    spec:
+      restartPolicy: Never
+      serviceAccountName: producer
+      initContainers:
+        - name: download-data
+          image: curlimages/curl:8.11.0
+          command:
+            - sh
+            - -c
+            - |
+              curl -fL --retry 3 --retry-delay 5 \
+                -o /data/yellow_tripdata_2024-01.parquet \
+                https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_2024-01.parquet
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      containers:
+        - name: producer
+          image: app:latest
+          command: ["python", "-m", "etl.entrypoints.producer"]
+          envFrom:
+            - configMapRef:
+                name: producer
+          env:
+            - name: PARQUET_FILE_PATH
+              value: /data/yellow_tripdata_2024-01.parquet
+            - name: REJECTED_DIR
+              value: /data/rejected
+          ports:
+            - name: metrics
+              containerPort: 9100
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          resources:
+            requests:
+              cpu: 250m
+              memory: 256Mi
+            limits:
+              cpu: 1000m
+              memory: 512Mi
+      volumes:
+        - name: data
+          emptyDir: {}
