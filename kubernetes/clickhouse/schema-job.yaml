@@ -1,0 +1,39 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: schema-apply
+  labels:
+    app.kubernetes.io/name: schema-apply
+    app.kubernetes.io/part-of: nyc-taxi
+  annotations:
+    # Wait for the clickhouse StatefulSet (wave 0, the default) to be
+    # Healthy before applying migrations.
+    argocd.argoproj.io/sync-wave: "1"
+    # Job pod templates are immutable; Replace=true lets an app image bump
+    # delete+recreate this Job instead of failing to apply in place.
+    argocd.argoproj.io/sync-options: Replace=true
+spec:
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: schema-apply
+    spec:
+      restartPolicy: Never
+      serviceAccountName: clickhouse
+      containers:
+        - name: schema-apply
+          image: app:latest
+          command: ["python", "-m", "etl.entrypoints.schema_apply"]
+          envFrom:
+            - configMapRef:
+                name: schema-apply
+            - secretRef:
+                name: schema-apply
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi

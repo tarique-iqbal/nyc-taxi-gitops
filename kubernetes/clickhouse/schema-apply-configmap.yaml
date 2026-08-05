@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: schema-apply
+data:
+  CLICKHOUSE_HOST: clickhouse.clickhouse.svc.cluster.local
+  CLICKHOUSE_PORT: "9000"
+  CLICKHOUSE_DB: taxi
+  CLICKHOUSE_USER: default
+  LOG_LEVEL: INFO

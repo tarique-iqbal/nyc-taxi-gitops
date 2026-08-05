@@ -1,0 +1,144 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: clickhouse
+data:
+  # Verbatim copy of nyc-taxi's deployments/docker/clickhouse/config/*.xml --
+  # mounted into config.d/ and users.d/ instead of COPYed by a Dockerfile,
+  # so the stock clickhouse/clickhouse-server image is used unmodified.
+  config.xml: |
+    <?xml version="1.0"?>
+    <clickhouse>
+
+        <!-- Network -->
+        <listen_host>0.0.0.0</listen_host>
+        <tcp_port>9000</tcp_port>
+        <http_port>8123</http_port>
+
+        <!-- Prometheus Metrics -->
+        <prometheus>
+            <endpoint>/metrics</endpoint>
+            <port>9363</port>
+            <metrics>true</metrics>
+            <events>true</events>
+            <asynchronous_metrics>true</asynchronous_metrics>
+        </prometheus>
+
+        <!-- Storage -->
+        <path>/var/lib/clickhouse/</path>
+        <tmp_path>/var/lib/clickhouse/tmp/</tmp_path>
+        <user_files_path>/var/lib/clickhouse/user_files/</user_files_path>
+        <format_schema_path>/var/lib/clickhouse/format_schemas/</format_schema_path>
+
+        <!-- Logging -->
+        <logger>
+            <level>information</level>
+            <console>true</console>
+            <formatting>
+                <type>JSON</type>
+            </formatting>
+        </logger>
+
+        <!-- Connections -->
+        <max_connections>100</max_connections>
+        <max_concurrent_queries>50</max_concurrent_queries>
+        <keep_alive_timeout>3</keep_alive_timeout>
+
+        <!-- Memory -->
+        <max_server_memory_usage_to_ram_ratio>0.9</max_server_memory_usage_to_ram_ratio>
+
+        <!-- MergeTree -->
+        <merge_tree>
+            <max_bytes_to_merge_at_max_space_in_pool>161061273600</max_bytes_to_merge_at_max_space_in_pool>
+            <replicated_deduplication_window>100</replicated_deduplication_window>
+            <non_replicated_deduplication_window>100</non_replicated_deduplication_window>
+        </merge_tree>
+
+        <!-- Defaults -->
+        <default_database>taxi</default_database>
+        <timezone>UTC</timezone>
+
+        <!-- Dictionaries -->
+        <dictionaries_config>/etc/clickhouse-server/dictionaries/*.xml</dictionaries_config>
+
+        <!-- Cache -->
+        <mark_cache_size>1073741824</mark_cache_size>
+
+    </clickhouse>
+  users.xml: |
+    <?xml version="1.0"?>
+    <clickhouse>
+
+        <!-- Profiles -->
+        <profiles>
+            <default>
+                <max_memory_usage>10000000000</max_memory_usage>
+                <use_uncompressed_cache>0</use_uncompressed_cache>
+                <load_balancing>random</load_balancing>
+                <async_insert>1</async_insert>
+                <wait_for_async_insert>1</wait_for_async_insert>
+            </default>
+
+            <etl_profile>
+                <max_memory_usage>20000000000</max_memory_usage>
+                <max_insert_block_size>1048576</max_insert_block_size>
+                <async_insert>1</async_insert>
+                <wait_for_async_insert>1</wait_for_async_insert>
+                <load_balancing>random</load_balancing>
+            </etl_profile>
+
+            <readonly>
+                <readonly>1</readonly>
+                <max_memory_usage>5000000000</max_memory_usage>
+                <load_balancing>random</load_balancing>
+            </readonly>
+        </profiles>
+
+        <!-- Quotas -->
+        <quotas>
+            <default>
+                <interval>
+                    <duration>3600</duration>
+                    <queries>0</queries>
+                    <errors>0</errors>
+                    <result_rows>0</result_rows>
+                    <read_rows>0</read_rows>
+                    <execution_time>0</execution_time>
+                </interval>
+            </default>
+        </quotas>
+
+        <!-- Users -->
+        <users>
+            <!-- ETL User -->
+            <etl_user>
+                <password>etl_password_secure</password>
+                <networks>
+                    <ip>::/0</ip>
+                </networks>
+                <profile>etl_profile</profile>
+                <quota>default</quota>
+            </etl_user>
+
+            <!-- Grafana Read-Only User -->
+            <readonly_user>
+                <password>grafana_readonly</password>
+                <networks>
+                    <ip>::/0</ip>
+                </networks>
+                <profile>readonly</profile>
+                <quota>default</quota>
+            </readonly_user>
+
+            <!-- Default User (Local development admin) -->
+            <default>
+                <password></password>
+                <networks>
+                    <ip>::/0</ip>
+                </networks>
+                <profile>default</profile>
+                <quota>default</quota>
+            </default>
+        </users>
+
+    </clickhouse>
