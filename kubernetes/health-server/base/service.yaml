@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: health-server
+  labels:
+    app.kubernetes.io/name: health-server
+spec:
+  selector:
+    app.kubernetes.io/name: health-server
+  ports:
+    - name: http
+      port: 8000
+      targetPort: http
