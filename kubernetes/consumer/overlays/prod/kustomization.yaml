@@ -1,0 +1,27 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../base
+
+# Matches nyc-taxi-trips' partition count (kafka-topics.sh) -- one
+# consumer per partition, per scaling_notes.md. Do not add an HPA here:
+# a mid-run scale-up triggers a partition rebalance and stalls consumption.
+replicas:
+  - name: consumer
+    count: 4
+
+patches:
+  - target:
+      kind: Deployment
+      name: consumer
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/resources
+        value:
+          requests:
+            cpu: 500m
+            memory: 512Mi
+          limits:
+            cpu: 2000m
+            memory: 1Gi

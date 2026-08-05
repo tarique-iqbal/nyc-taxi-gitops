@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: consumer
+data:
+  KAFKA_BOOTSTRAP_SERVERS: kafka.kafka.svc.cluster.local:9092
+  KAFKA_TOPIC: nyc-taxi-trips
+  KAFKA_CONSUMER_GROUP_ID: nyc-taxi-etl-consumer
+  KAFKA_CONSUMER_TIMEOUT_MS: "5000"
+  CLICKHOUSE_HOST: clickhouse.clickhouse.svc.cluster.local
+  CLICKHOUSE_PORT: "9000"
+  CLICKHOUSE_DB: taxi
+  CLICKHOUSE_USER: default
+  CLICKHOUSE_ASYNC_INSERT: "1"
+  CLICKHOUSE_WAIT_FOR_ASYNC_INSERT: "1"
+  ZONE_LOOKUP_PATH: data/reference/taxi_zone_lookup.csv
+  PROMETHEUS_PORT_CONSUMER: "9101"
+  LOG_LEVEL: INFO
