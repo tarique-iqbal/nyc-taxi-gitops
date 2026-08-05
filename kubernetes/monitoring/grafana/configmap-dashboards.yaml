@@ -1,0 +1,293 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboards
+data:
+  # Verbatim copy of deployments/docker/grafana/dashboards/etl_overview.json
+  etl_overview.json: |
+    {
+      "__inputs": [],
+      "__requires": [
+        { "type": "grafana", "id": "grafana", "name": "Grafana", "version": "10.4.0" },
+        { "type": "datasource", "id": "prometheus", "name": "Prometheus", "version": "1.0.0" }
+      ],
+      "annotations": {
+        "list": [
+          {
+            "builtIn": 1,
+            "datasource": { "type": "datasource", "uid": "grafana" },
+            "enable": true,
+            "hide": true,
+            "iconColor": "rgba(0, 211, 255, 1)",
+            "name": "Annotations & Alerts",
+            "type": "dashboard"
+          }
+        ]
+      },
+      "description": "NYC Taxi ETL pipeline — throughput, latency, DLQ and Kafka lag overview",
+      "editable": true,
+      "fiscalYearStartMonth": 0,
+      "graphTooltip": 1,
+      "id": null,
+      "links": [],
+      "panels": [
+        {
+          "collapsed": false,
+          "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+          "id": 100,
+          "title": "Throughput",
+          "type": "row"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus_uid" },
+          "description": "Total valid trips processed per second (1m rate)",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "unit": "reqps",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "green", "value": null },
+                  { "color": "yellow", "value": 100 },
+                  { "color": "red", "value": 500 }
+                ]
+              }
+            }
+          },
+          "gridPos": { "h": 8, "w": 6, "x": 0, "y": 1 },
+          "id": 1,
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "textMode": "auto", "colorMode": "background" },
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus_uid" },
+              "expr": "rate(trips_processed_total{status=\"valid\"}[1m])",
+              "legendFormat": "valid trips/s"
+            }
+          ],
+          "title": "Valid Trips / sec",
+          "type": "stat"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus_uid" },
+          "description": "Invalid / rejected trips per second",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "fixed", "fixedColor": "red" },
+              "unit": "reqps"
+            }
+          },
+          "gridPos": { "h": 8, "w": 6, "x": 6, "y": 1 },
+          "id": 2,
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background" },
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus_uid" },
+              "expr": "rate(trips_processed_total{status=\"invalid\"}[1m])",
+              "legendFormat": "invalid trips/s"
+            }
+          ],
+          "title": "Invalid Trips / sec",
+          "type": "stat"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus_uid" },
+          "description": "Cumulative trips processed since start",
+          "fieldConfig": {
+            "defaults": { "unit": "short", "color": { "mode": "fixed", "fixedColor": "blue" } }
+          },
+          "gridPos": { "h": 8, "w": 6, "x": 12, "y": 1 },
+          "id": 3,
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background" },
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus_uid" },
+              "expr": "trips_processed_total{status=\"valid\"}",
+              "legendFormat": "total valid"
+            }
+          ],
+          "title": "Total Trips Processed",
+          "type": "stat"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus_uid" },
+          "description": "Total records sent to the DLQ",
+          "fieldConfig": {
+            "defaults": { "unit": "short", "color": { "mode": "fixed", "fixedColor": "orange" } }
+          },
+          "gridPos": { "h": 8, "w": 6, "x": 18, "y": 1 },
+          "id": 4,
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background" },
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus_uid" },
+              "expr": "dlq_records_total",
+              "legendFormat": "DLQ total"
+            }
+          ],
+          "title": "DLQ Records Total",
+          "type": "stat"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus_uid" },
+          "description": "Valid vs invalid trip rate over time",
+          "fieldConfig": {
+            "defaults": { "unit": "reqps" },
+            "overrides": [
+              { "matcher": { "id": "byName", "options": "invalid trips/s" },
+                "properties": [{ "id": "color", "value": { "fixedColor": "red", "mode": "fixed" } }] }
+            ]
+          },
+          "gridPos": { "h": 8, "w": 24, "x": 0, "y": 9 },
+          "id": 5,
+          "options": { "tooltip": { "mode": "multi" }, "legend": { "displayMode": "list", "placement": "bottom" } },
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus_uid" },
+              "expr": "rate(trips_processed_total{status=\"valid\"}[1m])",
+              "legendFormat": "valid trips/s"
+            },
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus_uid" },
+              "expr": "rate(trips_processed_total{status=\"invalid\"}[1m])",
+              "legendFormat": "invalid trips/s"
+            }
+          ],
+          "title": "Trip Throughput",
+          "type": "timeseries"
+        },
+        {
+          "collapsed": false,
+          "gridPos": { "h": 1, "w": 24, "x": 0, "y": 17 },
+          "id": 101,
+          "title": "ClickHouse Insert Latency",
+          "type": "row"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus_uid" },
+          "description": "p50 / p95 / p99 batch insert duration into ClickHouse",
+          "fieldConfig": {
+            "defaults": { "unit": "s" }
+          },
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 18 },
+          "id": 6,
+          "options": { "tooltip": { "mode": "multi" }, "legend": { "displayMode": "list", "placement": "bottom" } },
+          "targets": [
+            {
+              "expr": "histogram_quantile(0.50, rate(batch_insert_duration_seconds_bucket{job=\"nyc-taxi-consumer\"}[5m]))",
+              "legendFormat": "p50"
+            },
+            {
+              "expr": "histogram_quantile(0.95, rate(batch_insert_duration_seconds_bucket{job=\"nyc-taxi-consumer\"}[5m]))",
+              "legendFormat": "p95"
+            },
+            {
+              "expr": "histogram_quantile(0.99, rate(batch_insert_duration_seconds_bucket{job=\"nyc-taxi-consumer\"}[5m]))",
+              "legendFormat": "p99"
+            }
+          ],
+          "title": "Batch Insert Latency (p50 / p95 / p99)",
+          "type": "timeseries"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus_uid" },
+          "description": "Average batch insert duration",
+          "fieldConfig": {
+            "defaults": { "unit": "ms", "color": { "mode": "fixed", "fixedColor": "purple" } }
+          },
+          "gridPos": { "h": 8, "w": 6, "x": 12, "y": 18 },
+          "id": 7,
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value" },
+          "targets": [
+            {
+              "expr": "rate(batch_insert_duration_seconds_sum{job=\"nyc-taxi-consumer\"}[5m]) / rate(batch_insert_duration_seconds_count{job=\"nyc-taxi-consumer\"}[5m]) * 1000",
+              "legendFormat": "avg insert ms"
+            }
+          ],
+          "title": "Avg Insert Duration",
+          "type": "stat"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus_uid" },
+          "description": "Number of batch inserts per second",
+          "fieldConfig": {
+            "defaults": { "unit": "reqps" }
+          },
+          "gridPos": { "h": 8, "w": 6, "x": 18, "y": 18 },
+          "id": 8,
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value" },
+          "targets": [
+            {
+              "expr": "rate(batch_insert_duration_seconds_count{job=\"nyc-taxi-consumer\"}[1m])",
+              "legendFormat": "batches/s"
+            }
+          ],
+          "title": "Batch Insert Rate",
+          "type": "stat"
+        },
+        {
+          "collapsed": false,
+          "gridPos": { "h": 1, "w": 24, "x": 0, "y": 26 },
+          "id": 102,
+          "title": "Kafka Consumer Lag",
+          "type": "row"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus_uid" },
+          "description": "Current consumer group lag — messages behind the producer",
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "green", "value": null },
+                  { "color": "yellow", "value": 1000 },
+                  { "color": "red", "value": 10000 }
+                ]
+              },
+              "color": { "mode": "thresholds" }
+            }
+          },
+          "gridPos": { "h": 8, "w": 8, "x": 0, "y": 27 },
+          "id": 9,
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background" },
+          "targets": [
+            {
+              "expr": "kafka_consumer_lag{job=\"nyc-taxi-consumer\"}",
+              "legendFormat": "consumer lag"
+            }
+          ],
+          "title": "Kafka Consumer Lag",
+          "type": "stat"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus_uid" },
+          "description": "Consumer lag over time — should trend toward 0 when producer is idle",
+          "fieldConfig": {
+            "defaults": { "unit": "short" }
+          },
+          "gridPos": { "h": 8, "w": 16, "x": 8, "y": 27 },
+          "id": 10,
+          "options": { "tooltip": { "mode": "multi" }, "legend": { "displayMode": "list", "placement": "bottom" } },
+          "targets": [
+            {
+              "expr": "kafka_consumer_lag{job=\"nyc-taxi-consumer\"}",
+              "legendFormat": "lag"
+            }
+          ],
+          "title": "Consumer Lag Over Time",
+          "type": "timeseries"
+        }
+      ],
+      "refresh": "10s",
+      "schemaVersion": 39,
+      "tags": ["etl", "kafka", "clickhouse", "nyc-taxi"],
+      "templating": { "list": [] },
+      "time": { "from": "now-1h", "to": "now" },
+      "timepicker": {},
+      "timezone": "browser",
+      "title": "NYC Taxi ETL — Overview",
+      "uid": "nyc-taxi-etl-overview",
+      "version": 1
+    }

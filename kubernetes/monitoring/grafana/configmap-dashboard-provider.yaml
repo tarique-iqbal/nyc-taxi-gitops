@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-provider
+data:
+  # Verbatim copy of deployments/docker/grafana/provisioning/dashboards/dashboard.yml
+  dashboard.yml: |
+    apiVersion: 1
+
+    providers:
+      - name: "NYC Taxi ETL"
+        orgId: 1
+        type: file
+        disableDeletion: false
+        updateIntervalSeconds: 30
+        allowUiUpdates: false
+        options:
+          path: /var/lib/grafana/dashboards
+          foldersFromFilesStructure: false

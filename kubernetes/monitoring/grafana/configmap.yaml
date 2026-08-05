@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana
+data:
+  GF_SECURITY_ADMIN_USER: admin
+  GF_AUTH_ANONYMOUS_ENABLED: "true"
+  GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+  # Not baked into a custom image (matches the ConfigMap-provisioning
+  # approach used everywhere else here) -- installed at container start.
+  GF_INSTALL_PLUGINS: grafana-clickhouse-datasource

@@ -1,0 +1,39 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-datasources
+data:
+  # Adapted from nyc-taxi's deployments/docker/grafana/provisioning/datasources/datasource.yml --
+  # ClickHouse host changed to its in-cluster FQDN (cross-namespace: grafana
+  # runs in monitoring, ClickHouse in clickhouse). readonly_user/password
+  # match deployments/docker/clickhouse/config/users.xml.
+  datasource.yml: |
+    apiVersion: 1
+
+    datasources:
+
+      - name: Prometheus
+        type: prometheus
+        uid: prometheus_uid
+        access: proxy
+        url: http://prometheus:9090
+        isDefault: true
+        editable: false
+        jsonData:
+          timeInterval: "15s"
+          httpMethod: POST
+
+      - name: ClickHouse
+        type: grafana-clickhouse-datasource
+        uid: clickhouse_uid
+        access: proxy
+        editable: false
+        jsonData:
+          host: clickhouse.clickhouse.svc.cluster.local
+          port: 9000
+          username: readonly_user
+          defaultDatabase: taxi
+          protocol: native
+          secure: false
+        secureJsonData:
+          password: grafana_readonly
