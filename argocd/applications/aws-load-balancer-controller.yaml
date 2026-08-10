@@ -1,0 +1,41 @@
+# The one Application in this repo not sourced from our own git repo --
+# aws-load-balancer-controller ships as a Helm chart from AWS's own eks-charts
+# repo, so this points there directly instead of at a `kubernetes/<service>`
+# Kustomize path. See CLAUDE.md for why (no EKS-managed add-on exists for it,
+# and installing it via `helm_release` from the same Terraform apply that
+# creates the cluster hits a provider chicken-and-egg problem).
+#
+# <CLUSTER_NAME> / <ALB_CONTROLLER_ROLE_ARN> come from `terraform output`
+# after `terraform apply` -- see modules/eks/outputs.tf in nyc-taxi.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: nyc-taxi-aws-load-balancer-controller
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: nyc-taxi
+
+  source:
+    repoURL: https://aws.github.io/eks-charts
+    chart: aws-load-balancer-controller
+    targetRevision: "3.5.0"
+    helm:
+      values: |
+        clusterName: <CLUSTER_NAME>
+        region: us-east-1
+        serviceAccount:
+          create: true
+          name: aws-load-balancer-controller
+          annotations:
+            eks.amazonaws.com/role-arn: <ALB_CONTROLLER_ROLE_ARN>
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kube-system
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
