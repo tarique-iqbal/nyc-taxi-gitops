@@ -1,0 +1,30 @@
+# App-of-apps root: this is the one Application you apply manually. It
+# points at argocd/applications/, which contains one Application manifest per
+# service -- Argo CD then manages all of those automatically. Adding a new
+# service is just adding a new file under argocd/applications/ and letting
+# this sync pick it up.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: nyc-taxi-root
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: nyc-taxi
+
+  source:
+    repoURL: "https://github.com/tarique-iqbal/nyc-taxi-gitops.git"
+    targetRevision: main
+    path: argocd/applications
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

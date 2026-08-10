@@ -1,0 +1,55 @@
+# AppProject scoping what this repo's Applications are allowed to touch --
+# narrower than Argo CD's "default" project, which permits any repo/cluster/
+# namespace.
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: nyc-taxi
+  namespace: argocd
+spec:
+  description: nyc-taxi streaming ETL pipeline (producer/consumer/health-server, Kafka, ClickHouse, monitoring)
+
+  sourceRepos:
+    - "https://github.com/tarique-iqbal/nyc-taxi-gitops.git"
+    # Helm repo for the AWS Load Balancer Controller -- the one Application
+    # in this repo that isn't sourced from our own git repo.
+    - "https://aws.github.io/eks-charts"
+
+  destinations:
+    - namespace: etl
+      server: https://kubernetes.default.svc
+    - namespace: kafka
+      server: https://kubernetes.default.svc
+    - namespace: clickhouse
+      server: https://kubernetes.default.svc
+    - namespace: monitoring
+      server: https://kubernetes.default.svc
+    - namespace: kube-system
+      server: https://kubernetes.default.svc
+    # Not where any workload runs -- the namespaces Application's destination,
+    # since its resources (Namespace objects) are cluster-scoped and have no
+    # real namespace of their own.
+    - namespace: argocd
+      server: https://kubernetes.default.svc
+
+  clusterResourceWhitelist:
+    - group: ""
+      kind: Namespace
+    # Required by the aws-load-balancer-controller chart: it installs
+    # cluster-scoped RBAC, webhooks, and the TargetGroupBinding CRD.
+    - group: rbac.authorization.k8s.io
+      kind: ClusterRole
+    - group: rbac.authorization.k8s.io
+      kind: ClusterRoleBinding
+    - group: admissionregistration.k8s.io
+      kind: MutatingWebhookConfiguration
+    - group: admissionregistration.k8s.io
+      kind: ValidatingWebhookConfiguration
+    - group: apiextensions.k8s.io
+      kind: CustomResourceDefinition
+    - group: networking.k8s.io
+      kind: IngressClass
+
+  namespaceResourceWhitelist:
+    - group: "*"
+      kind: "*"
