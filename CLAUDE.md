@@ -25,14 +25,11 @@ GitOps manifests for the [`nyc-taxi`](https://github.com/tarique-iqbal/nyc-taxi)
 
 ## Conventions
 
-- Every `Application` in `argocd/applications/` sets `syncPolicy.automated: {prune: true, selfHeal: true}`   and points at a `kubernetes/<service>` (or `.../overlays/<env>`) Kustomize path.
-- `bootstrap/project.yaml` (the `AppProject`) is applied manually and is **not** watched by the   root Application — scope/RBAC changes there require a deliberate `kubectl apply`, not an
-  automatic sync.
+- Every `Application` in `argocd/applications/` sets `syncPolicy.automated: {prune: true, selfHeal: true}`. All but one point at a `kubernetes/<service>` (or `.../overlays/<env>`) Kustomize path; `aws-load-balancer-controller.yaml` is Helm-sourced from AWS's own `eks-charts` repo instead, since that's the only way AWS ships it (no EKS-managed add-on, and installing it via `helm_release` from the same Terraform apply that creates the cluster hits a provider chicken-and-egg problem). Mixing source types per-Application like this is normal in Argo CD.
+- `bootstrap/project.yaml` (the `AppProject`) is applied manually and is **not** watched by the   root Application — scope/RBAC changes there require a deliberate `kubectl apply`, not an automatic sync.
 - Overlays patch replica count and resource requests/limits only; shared spec/probes/ports stay   in `base/`.
 - Verify offline before touching a cluster: `kubectl kustomize <path>` to render,   `kubectl apply --dry-run=client -k <path>` to validate. No live cluster required for either.
-- `kubernetes/ingress/grafana-ingress.yaml` uses `ingressClassName: alb`, but `nyc-taxi`'s
-  Terraform doesn't yet install the AWS Load Balancer Controller (only the subnet tags for
-  it exist in `modules/networking`) -- the Ingress won't get an address until that's added.
+- `kubernetes/ingress/grafana-ingress.yaml` uses `ingressClassName: alb`, served by `argocd/applications/aws-load-balancer-controller.yaml`. Its IRSA role is provisioned in `nyc-taxi`'s Terraform (`modules/eks/main.tf`, `alb_controller_role_arn` output) -- after `terraform apply`, replace that Application's `<CLUSTER_NAME>`/`<ALB_CONTROLLER_ROLE_ARN>` placeholders with the real output values.
 
 ## Standing constraint
 
