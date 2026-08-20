@@ -11,7 +11,7 @@ spec:
   source:
     repoURL: "https://github.com/tarique-iqbal/nyc-taxi-gitops.git"
     targetRevision: main
-    path: kubernetes/ingress
+    path: kubernetes/ingress/base
 
   destination:
     server: https://kubernetes.default.svc

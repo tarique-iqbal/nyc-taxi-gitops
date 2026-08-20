@@ -11,7 +11,7 @@ spec:
   source:
     repoURL: "https://github.com/tarique-iqbal/nyc-taxi-gitops.git"
     targetRevision: main
-    path: kubernetes/clickhouse
+    path: kubernetes/clickhouse/base
 
   destination:
     server: https://kubernetes.default.svc
