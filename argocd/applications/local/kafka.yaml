@@ -1,0 +1,29 @@
+# Same path as the AWS Application (argocd/applications/kafka.yaml) --
+# kafka has no per-environment overlay since it's single-node everywhere,
+# and its pinned confluentinc/cp-kafka image is a real public image, so
+# there's no local-only image-tag concern here.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: nyc-taxi-kafka
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: nyc-taxi
+
+  source:
+    repoURL: "https://github.com/tarique-iqbal/nyc-taxi-gitops.git"
+    targetRevision: main
+    path: kubernetes/kafka
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kafka
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
