@@ -1,0 +1,34 @@
+# Local (kind) counterpart to root-application.yaml -- apply this instead
+# when bootstrapping against a kind cluster, after install-argocd.sh and
+# install-ingress-nginx.sh. Points at argocd/applications/local/ instead of
+# argocd/applications/: that directory swaps the AWS-only pieces (ALB
+# ingress + aws-load-balancer-controller) for kind-compatible ones and
+# points producer/consumer/health-server at overlays/local instead of
+# overlays/dev. Argo CD directory Applications are non-recursive by default,
+# so this and root-application.yaml never see each other's files even though
+# both live under argocd/applications/.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: nyc-taxi-root-local
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: nyc-taxi
+
+  source:
+    repoURL: "https://github.com/tarique-iqbal/nyc-taxi-gitops.git"
+    targetRevision: main
+    path: argocd/applications/local
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
