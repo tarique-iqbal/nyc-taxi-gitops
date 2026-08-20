@@ -1,0 +1,17 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Same reason as the producer/consumer/health-server/clickhouse local
+# overlays: kafka's own broker image is a Kustomize `images:` placeholder
+# (`kafka:latest`) meant to be rewritten to a real registry image by CI --
+# with nothing rewriting it locally, kubelet tries to pull `kafka:latest`
+# from Docker Hub and fails (no such public image). Build it locally
+# (deployments/docker/kafka/Dockerfile in nyc-taxi) and
+# `kind load docker-image kafka:local --name <cluster>` before syncing.
+resources:
+  - ../../base
+
+images:
+  - name: kafka
+    newName: kafka
+    newTag: local
