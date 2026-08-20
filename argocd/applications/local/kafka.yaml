@@ -1,7 +1,8 @@
-# Same path as the AWS Application (argocd/applications/kafka.yaml) --
-# kafka has no per-environment overlay since it's single-node everywhere,
-# and its pinned confluentinc/cp-kafka image is a real public image, so
-# there's no local-only image-tag concern here.
+# Points at overlays/local (not kubernetes/kafka/base, which the AWS
+# Application uses) because kafka's own broker image is a Kustomize
+# `images:` placeholder (kafka:latest) rewritten to a real registry image by
+# CI -- same local-only image-tag concern as producer/consumer/health-server.
+# See kubernetes/kafka/overlays/local/kustomization.yaml.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -15,7 +16,7 @@ spec:
   source:
     repoURL: "https://github.com/tarique-iqbal/nyc-taxi-gitops.git"
     targetRevision: main
-    path: kubernetes/kafka
+    path: kubernetes/kafka/overlays/local
 
   destination:
     server: https://kubernetes.default.svc
