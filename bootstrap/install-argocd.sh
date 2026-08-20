@@ -20,7 +20,12 @@ fi
 
 kubectl create namespace "$ARGOCD_NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
 
-kubectl apply -n "$ARGOCD_NAMESPACE" \
+# --server-side (not a plain `apply`): Argo CD's CRDs -- applicationsets.
+# argoproj.io especially -- have OpenAPI schemas large enough that a regular
+# apply's last-applied-configuration annotation exceeds the API server's
+# 256KiB annotation limit. Server-side apply tracks changes via managed
+# fields instead of that annotation, so it doesn't hit the limit.
+kubectl apply --server-side --force-conflicts -n "$ARGOCD_NAMESPACE" \
   -f "https://raw.githubusercontent.com/argoproj/argo-cd/${ARGOCD_VERSION}/manifests/install.yaml"
 
 echo "Waiting for argocd-server to be ready..."
