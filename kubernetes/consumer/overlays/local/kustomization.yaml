@@ -9,3 +9,24 @@ images:
   - name: app
     newName: app
     newTag: local
+
+# dev's 128Mi/256Mi limit OOMKilled the consumer under real throughput the
+# first time this was actually run (exit 137, ~30-40s into processing).
+# Bumped to the staging tier's values here only -- not in overlays/dev
+# itself, since that's untested against real load and this repo's convention
+# treats sizing changes as deliberate, not silent. Revisit if staging is
+# ever actually run for real and turns out to need the same fix.
+patches:
+  - target:
+      kind: Deployment
+      name: consumer
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/resources
+        value:
+          requests:
+            cpu: 250m
+            memory: 256Mi
+          limits:
+            cpu: 1000m
+            memory: 512Mi
