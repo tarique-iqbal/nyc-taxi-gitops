@@ -21,7 +21,7 @@ GitOps manifests for the [`nyc-taxi`](https://github.com/tarique-iqbal/nyc-taxi)
     ├── producer/         # runs as a Job -- one-shot, exits once the Parquet file is ingested; base + overlays/{dev,staging,prod,local}
     ├── consumer/         # base + overlays/{dev,staging,prod,local} -- no HPA (see scaling_notes.md)
     ├── health-server/    # base + overlays/{dev,staging,prod,local}
-    ├── kafka/            # KRaft StatefulSet + topic-creation Job
+    ├── kafka/            # KRaft StatefulSet + topic-creation Job; base + overlays/local
     ├── clickhouse/       # StatefulSet + schema-apply Job; base + overlays/local
     ├── monitoring/       # Prometheus + Grafana (ConfigMap-provisioned dashboards)
     └── ingress/          # Grafana Ingress; base (AWS ALB) + overlays/local (ingress-nginx)
@@ -42,10 +42,10 @@ A kind cluster is a parallel, disposable deployment target for smoke-testing thi
 What's different from AWS:
 
 - No ALB / IRSA: `aws-load-balancer-controller` has no local counterpart. `bootstrap/install-ingress-nginx.sh` installs ingress-nginx as a plain static manifest instead (kind-only, not Argo-managed, same reasoning as `install-argocd.sh` bootstrapping Argo CD itself before anything can reconcile). `kubernetes/ingress/overlays/local` swaps `ingressClassName: alb` for `nginx` and drops the ALB annotations.
-- No registry: `producer`, `consumer`, `health-server`, and clickhouse's `schema-apply` Job all run the `app` image. Each has an `overlays/local` that overrides the `images:` tag to `local` (layered on top of `overlays/dev` for producer/consumer/health-server, since local only needs to add the tag override, not different sizing). Build with `docker build -t app:local ...` in `nyc-taxi` and run `kind load docker-image app:local --name <cluster>` before syncing — a non-`latest` tag makes Kubernetes default to `imagePullPolicy: IfNotPresent`, so kubelet uses the loaded image instead of trying to pull from a real registry.
+- No registry: `producer`, `consumer`, `health-server`, and clickhouse's `schema-apply` Job all run the `app` image; kafka's `StatefulSet` and topic Job run the `kafka` image. Both are Kustomize `images:` placeholders normally rewritten to a real registry image by CI. Each service's `overlays/local` overrides its tag to `local` instead (layered on top of `overlays/dev` for producer/consumer/health-server, since local only needs to add the tag override, not different sizing). Build with `docker build -t app:local ...` / `docker build -t kafka:local -f deployments/docker/kafka/Dockerfile .` in `nyc-taxi` and run `kind load docker-image <image>:local --name <cluster>` for each before syncing — a non-`latest` tag makes Kubernetes default to `imagePullPolicy: IfNotPresent`, so kubelet uses the loaded image instead of trying to pull from a real registry.
 - Storage: no `storageClassName` is set anywhere in `kubernetes/`, so kind's default `standard` StorageClass (local-path-provisioner) satisfies every PVC (Kafka, ClickHouse, Prometheus, Grafana) with no changes needed.
 
-Order of operations: `kind create cluster --config bootstrap/kind-config.yaml` → build + `kind load docker-image app:local` → `bootstrap/install-argocd.sh` → `bootstrap/install-ingress-nginx.sh` → `kubectl apply -f bootstrap/project.yaml` → `kubectl apply -f bootstrap/root-application-local.yaml`. Grafana is then reachable at `http://localhost/` (kind-config.yaml maps container port 80 to the host).
+Order of operations: `kind create cluster --config bootstrap/kind-config.yaml` → build + `kind load docker-image` both `app:local` and `kafka:local` → `bootstrap/install-argocd.sh` → `bootstrap/install-ingress-nginx.sh` → `kubectl apply -f bootstrap/project.yaml` → `kubectl apply -f bootstrap/root-application-local.yaml`. Grafana is then reachable at `http://localhost/` (kind-config.yaml maps container port 80 to the host).
 
 ## Standing constraint
 
