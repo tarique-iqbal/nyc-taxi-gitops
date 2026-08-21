@@ -17,6 +17,13 @@ spec:
         app.kubernetes.io/name: kafka
     spec:
       serviceAccountName: kafka
+      # Without this, kubelet auto-injects Docker-links-style env vars for
+      # every Service in the namespace -- since the Service here is named
+      # `kafka`, that includes KAFKA_PORT=tcp://<clusterIP>:9092. The
+      # confluent image's own configure script treats a non-empty
+      # KAFKA_PORT as a deprecated/conflicting legacy input and refuses to
+      # start (exits 1 right after printing the deprecation warning).
+      enableServiceLinks: false
       containers:
         - name: kafka
           image: kafka:latest
