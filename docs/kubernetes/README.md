@@ -428,6 +428,26 @@ hand annoying (see [Status](#status)).
       (`consumer/overlays/local` now patches its own sizing — see
       [Resource sizing across overlays](#resource-sizing-across-overlays)).
       Never applied to a real EKS cluster.
+- [ ] No `NetworkPolicy` anywhere in this repo — every pod in every
+      namespace can currently reach every other pod on any port. Not
+      production standard: ClickHouse's native/http ports and Kafka's
+      broker port are reachable cluster-wide instead of only from the
+      services that actually need them (`consumer`, `health-server`,
+      `schema-apply`, `grafana`, `prometheus` — see the [DNS
+      reference](#cross-service-dns-reference) table above for the exact
+      edges). Planned shape: a `default-deny-all` + `allow-dns-egress`
+      pair per namespace (`kubernetes/namespaces/`), plus one
+      `NetworkPolicy` per service/Job living alongside its other manifests
+      (`kubernetes/<service>/base/network-policy.yaml`) that opens exactly
+      the edges in that table. Grafana's ingress rule needs an `ipBlock`
+      rather than a pod/namespaceSelector, since the ALB (`target-type:
+      ip`) routes to the pod directly, bypassing the Service. Also worth
+      confirming before rollout: kubelet's own liveness/readiness probes
+      (httpGet/tcpSocket against each pod's own port) need to stay exempt
+      from ingress enforcement on whatever CNI/policy engine actually gets
+      used — true for AWS VPC CNI + Calico and for kind's default CNI, but
+      implementation-defined rather than guaranteed by the NetworkPolicy
+      API itself.
 
 Keep this section current as those land — when a fourth namespace or
 service is added, add it to the layout tree, the sizing table, and the DNS
