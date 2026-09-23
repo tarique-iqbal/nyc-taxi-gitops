@@ -55,3 +55,12 @@ spec:
   # restrict egress at all -- the namespace-level default-deny-all
   # backstop (step 8) is what will eventually cover that, and clickhouse
   # doesn't need it to.
+  #
+  # No ingress rule opens port 8123 (http) to any peer -- nothing in the
+  # traffic map needs it (consumer/health-server/schema-apply/grafana all
+  # use the native port 9000; prometheus uses the metrics port 9363). The
+  # StatefulSet's own startupProbe/livenessProbe/readinessProbe all hit
+  # `http`, so this relies on the same kubelet-probe-exemption caveat as
+  # health-server/base/network-policy.yaml -- if anything ever needs
+  # http-protocol access to ClickHouse, add an explicit rule here rather
+  # than assuming the exemption is enough.
