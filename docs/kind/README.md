@@ -35,9 +35,12 @@ steps which run from `nyc-taxi`'s root.
 # 1. Cluster
 kind create cluster --config bootstrap/kind-config.yaml
 
-# 2. Images (from nyc-taxi's root, not this repo)
+# 2. Images (from nyc-taxi's root, not this repo). Contexts differ: app's
+#    Dockerfile COPYs from the repo root (pyproject.toml, etl/, etc.), but
+#    kafka's Dockerfile COPYs kafka-topics.sh, which lives next to it --
+#    building with `.` as context fails with "kafka-topics.sh: not found".
 docker build -t app:local -f deployments/docker/app/Dockerfile .
-docker build -t kafka:local -f deployments/docker/kafka/Dockerfile .
+docker build -t kafka:local -f deployments/docker/kafka/Dockerfile deployments/docker/kafka
 
 # 3. Load both into the kind cluster -- kind's own Docker daemon can't see
 #    your host's image cache, so a build alone isn't enough
@@ -161,6 +164,14 @@ rather than an older Application definition.
 repo's changes weren't pushed to `origin` yet — see
 [Prerequisites](#prerequisites). Push, then
 `argocd app sync nyc-taxi-root-local` (or wait for the next automated poll).
+
+**`docker build -t kafka:local ...` fails with `"/kafka-topics.sh": not
+found`.** Wrong build context — `kafka-topics.sh` lives next to the
+Dockerfile in `deployments/docker/kafka/`, not at `nyc-taxi`'s repo root.
+Build with that directory as context, not `.`:
+`docker build -t kafka:local -f deployments/docker/kafka/Dockerfile
+deployments/docker/kafka`. (`app`'s Dockerfile is the opposite — it COPYs
+from the repo root, so `.` is correct there.)
 
 **`kubectl apply --server-side` errors on the Argo CD CRDs.** Shouldn't
 happen — `install-argocd.sh` already uses `--server-side --force-conflicts`
