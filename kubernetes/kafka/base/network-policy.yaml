@@ -1,0 +1,58 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: kafka
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: kafka
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # producer, consumer, health-server -- publish/consume/lag-check.
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: etl
+      ports:
+        - protocol: TCP
+          port: 9092
+    # KRaft controller quorum traffic. Single-node here, so this is the
+    # broker talking to itself via kafka-headless -- still real pod
+    # network traffic subject to policy enforcement, not a loopback
+    # exemption.
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: kafka
+      ports:
+        - protocol: TCP
+          port: 9093
+    # kafka-topics Job, same namespace.
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: kafka-topics
+      ports:
+        - protocol: TCP
+          port: 9092
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: kafka
+      ports:
+        - protocol: TCP
+          port: 9093
+    # DNS -- self-contained, see producer/base/network-policy.yaml's comment
+    # for why this isn't left to the shared namespace-level baseline alone.
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53

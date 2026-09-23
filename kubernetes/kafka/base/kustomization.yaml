@@ -10,6 +10,8 @@ resources:
   - service.yaml
   - statefulset.yaml
   - topic-job.yaml
+  - network-policy.yaml
+  - kafka-topics-network-policy.yaml
 
 images:
   - name: kafka
