@@ -9,6 +9,7 @@ resources:
   - secret.yaml
   - deployment.yaml
   - service.yaml
+  - network-policy.yaml
 
 images:
   - name: app
