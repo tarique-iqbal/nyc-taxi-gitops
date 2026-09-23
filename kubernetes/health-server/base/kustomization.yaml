@@ -10,6 +10,7 @@ resources:
   - deployment.yaml
   - service.yaml
   - hpa.yaml
+  - network-policy.yaml
 
 images:
   - name: app

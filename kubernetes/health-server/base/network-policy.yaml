@@ -1,0 +1,48 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: health-server
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: health-server
+  # No Ingress here -- kubelet's own liveness/readiness httpGet probes
+  # (hitting this pod's own :8000) need to stay reachable regardless. True
+  # for AWS VPC CNI + Calico and kind's default CNI in practice, but this
+  # is implementation-defined behavior, not part of the NetworkPolicy API
+  # contract -- see notes/network_policy_plan.md's open question. Verify
+  # probes still pass after this lands, don't assume.
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kafka
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: kafka
+      ports:
+        - protocol: TCP
+          port: 9092
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: clickhouse
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: clickhouse
+      ports:
+        - protocol: TCP
+          port: 9000
+    # DNS -- self-contained, see producer/base/network-policy.yaml's comment
+    # for why this isn't left to the shared namespace-level baseline alone.
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
