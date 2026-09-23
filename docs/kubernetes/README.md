@@ -412,14 +412,6 @@ hand annoying (see [Status](#status)).
       and `kubernetes/ingress/overlays/local` written for the kind path.
       `kubectl kustomize` output for all three AWS-facing `base/` paths
       verified byte-identical to their pre-restructure flat layout.
-- [ ] No TLS on the Grafana Ingress — HTTP-only, no ACM cert / `host:` rule,
-      since no Route53 domain is provisioned. Revisit once one exists.
-      (Doesn't apply to the kind path, which uses ingress-nginx over plain
-      HTTP on `localhost` by design.)
-- [ ] No verify-all script yet — the 20-command block above is run by hand.
-      A `scripts/verify-kustomize.sh` (or similar) looping over every
-      Kustomize path would remove the copy-paste risk of the list here
-      drifting from the actual directory tree.
 - [x] Applied to a real kind cluster via `argocd/applications/local/` and
       run end-to-end for real: producer published, consumer persisted to
       ClickHouse, Grafana showed the result. Along the way, caught and fixed
@@ -428,26 +420,61 @@ hand annoying (see [Status](#status)).
       (`consumer/overlays/local` now patches its own sizing — see
       [Resource sizing across overlays](#resource-sizing-across-overlays)).
       Never applied to a real EKS cluster.
-- [ ] No `NetworkPolicy` anywhere in this repo — every pod in every
-      namespace can currently reach every other pod on any port. Not
-      production standard: ClickHouse's native/http ports and Kafka's
-      broker port are reachable cluster-wide instead of only from the
+- [x] Every namespace and service has a `NetworkPolicy`: ClickHouse's
+      native port (9000) and Kafka's broker port are scoped to only the
       services that actually need them (`consumer`, `health-server`,
       `schema-apply`, `grafana`, `prometheus` — see the [DNS
       reference](#cross-service-dns-reference) table above for the exact
-      edges). Planned shape: a `default-deny-all` + `allow-dns-egress`
-      pair per namespace (`kubernetes/namespaces/`), plus one
-      `NetworkPolicy` per service/Job living alongside its other manifests
-      (`kubernetes/<service>/base/network-policy.yaml`) that opens exactly
-      the edges in that table. Grafana's ingress rule needs an `ipBlock`
-      rather than a pod/namespaceSelector, since the ALB (`target-type:
-      ip`) routes to the pod directly, bypassing the Service. Also worth
-      confirming before rollout: kubelet's own liveness/readiness probes
-      (httpGet/tcpSocket against each pod's own port) need to stay exempt
-      from ingress enforcement on whatever CNI/policy engine actually gets
-      used — true for AWS VPC CNI + Calico and for kind's default CNI, but
+      edges each policy opens). ClickHouse's http port (8123) isn't opened
+      to any peer at all — nothing in the traffic map needs it, only the
+      StatefulSet's own kubelet probes do, so it relies on the same
+      kubelet-probe-exemption caveat as `health-server` below rather than
+      an explicit rule. Each service/Job carries its own
+      self-contained policy (`kubernetes/<service>/base/network-policy.yaml`,
+      plus e.g. `kafka-topics-network-policy.yaml` and
+      `schema-apply-network-policy.yaml` for the Jobs that don't share
+      their StatefulSet's pod labels) — including its own DNS-egress rule
+      rather than depending on the namespace-level baseline landing first,
+      since Argo CD applies each `Application` independently with no
+      cross-Application ordering guarantee. `kubernetes/namespaces/
+      network-policies/` adds a `default-deny-all` + `allow-dns-egress`
+      pair per namespace as a backstop, landed last since every workload
+      was already self-contained by then. Grafana's ingress rule uses an
+      `ipBlock: 0.0.0.0/0` rather than a pod/namespaceSelector, since the
+      ALB (`target-type: ip`) routes to the pod directly, bypassing the
+      Service — the same rule also covers kind's ingress-nginx path.
+      health-server's policy has no `Ingress` rule of its own, relying on
+      kubelet's liveness/readiness probes staying exempt from ingress
+      enforcement. Generally true in practice for a real NetworkPolicy
+      engine — kubelet-originated traffic carries a distinct host identity
+      that engines like AWS's Cilium-based EKS Network Policy feature
+      commonly exempt by default — but version/config-sensitive enough
+      (host firewall mode, policy-audit-mode, etc.) that it's
       implementation-defined rather than guaranteed by the NetworkPolicy
-      API itself.
+      API itself; confirm directly against whatever policy engine EKS
+      actually ends up using.
+
+      Applied to the kind cluster (`argocd/applications/local/` reports
+      every `NetworkPolicy`-owning Application Synced/Healthy) — but that
+      only proves the manifests are valid and didn't break anything, not
+      that traffic is actually being restricted. kind's default CNI is
+      **kindnetd**, a basic bridge CNI with no policy engine at all, so it
+      silently ignores every `NetworkPolicy` object on this cluster today —
+      `health-server`/`consumer` pod restarts observed during rollout were
+      ordinary startup timing (kubelet probing before the app finished
+      binding its port), not policy enforcement, confirmed by kindnetd
+      having no `NetworkPolicy` support to enforce in the first place. Real
+      enforcement is still unverified — would need either kind reconfigured
+      with a policy-capable CNI (`disableDefaultCNI` + Calico or Cilium) or
+      an actual EKS cluster to confirm these rules behave as intended.
+- [ ] No TLS on the Grafana Ingress — HTTP-only, no ACM cert / `host:` rule,
+      since no Route53 domain is provisioned. Revisit once one exists.
+      (Doesn't apply to the kind path, which uses ingress-nginx over plain
+      HTTP on `localhost` by design.)
+- [ ] No verify-all script yet — the 20-command block above is run by hand.
+      A `scripts/verify-kustomize.sh` (or similar) looping over every
+      Kustomize path would remove the copy-paste risk of the list here
+      drifting from the actual directory tree.
 
 Keep this section current as those land — when a fourth namespace or
 service is added, add it to the layout tree, the sizing table, and the DNS
