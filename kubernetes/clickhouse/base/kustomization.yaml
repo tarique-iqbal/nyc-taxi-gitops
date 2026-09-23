@@ -11,6 +11,8 @@ resources:
   - schema-apply-configmap.yaml
   - schema-apply-secret.yaml
   - schema-job.yaml
+  - network-policy.yaml
+  - schema-apply-network-policy.yaml
 
 images:
   - name: app
