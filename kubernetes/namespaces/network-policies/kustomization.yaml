@@ -1,0 +1,15 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# No `namespace:` transformer here -- unlike every other kustomization in
+# this repo, these NetworkPolicies target four different namespaces, so
+# each file sets its own metadata.namespace instead.
+resources:
+  - etl-default-deny.yaml
+  - etl-allow-dns.yaml
+  - kafka-default-deny.yaml
+  - kafka-allow-dns.yaml
+  - clickhouse-default-deny.yaml
+  - clickhouse-allow-dns.yaml
+  - monitoring-default-deny.yaml
+  - monitoring-allow-dns.yaml

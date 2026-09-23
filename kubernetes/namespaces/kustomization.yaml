@@ -6,3 +6,4 @@ resources:
   - kafka.yaml
   - clickhouse.yaml
   - monitoring.yaml
+  - network-policies

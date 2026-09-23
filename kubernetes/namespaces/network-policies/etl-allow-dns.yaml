@@ -1,0 +1,23 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-dns-egress
+  namespace: etl
+spec:
+  # Redundant with each service's own DNS rule (see e.g.
+  # producer/base/network-policy.yaml) for anything already covered, but
+  # this is what protects DNS for any pod that ends up with no
+  # service-specific policy at all.
+  podSelector: {}
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53

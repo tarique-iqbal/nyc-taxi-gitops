@@ -1,0 +1,17 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+  namespace: etl
+spec:
+  # Matches every pod in the namespace. Ingress/Egress with no rules means
+  # "deny everything not explicitly allowed" -- by this point every real
+  # workload here already has its own complete policy (see
+  # kubernetes/producer,consumer,health-server/base/network-policy.yaml),
+  # so this changes nothing for them; it's a backstop for anything that
+  # isn't covered. NetworkPolicies targeting the same pod union their
+  # rules, so this is additive, not a replacement for those.
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
