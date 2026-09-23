@@ -7,6 +7,7 @@ resources:
   - serviceaccount.yaml
   - configmap.yaml
   - job.yaml
+  - network-policy.yaml
 
 images:
   - name: app

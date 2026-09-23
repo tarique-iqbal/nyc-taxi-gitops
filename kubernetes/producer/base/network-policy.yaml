@@ -1,0 +1,44 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: producer
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: producer
+  policyTypes:
+    - Egress
+  egress:
+    # Kafka broker -- publishing trip events.
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kafka
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: kafka
+      ports:
+        - protocol: TCP
+          port: 9092
+    # initContainer download-data pulls the source Parquet file from
+    # CloudFront over the public internet -- not a cluster-internal peer,
+    # so this has to be an ipBlock rather than a namespace/podSelector.
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+      ports:
+        - protocol: TCP
+          port: 443
+    # DNS -- self-contained per docs/kubernetes/README.md's NetworkPolicy
+    # plan: this rule doesn't depend on the separate namespace-level
+    # allow-dns-egress baseline landing first, since Argo CD applies each
+    # Application independently with no cross-Application ordering.
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
