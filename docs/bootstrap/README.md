@@ -74,6 +74,11 @@ kafka's own image is a Kustomize `images:` placeholder too, not just the
 from Docker Hub if it was never loaded. First real run of this path caught
 exactly that; see `docs/argocd/README.md#status`.
 
+For the exact commands (including the `docker build` context gotcha —
+`app` and `kafka` need different build contexts) and troubleshooting for
+this whole path, see `docs/kind/README.md`; this section covers the why,
+not the day-to-day how-to.
+
 `install-ingress-nginx.sh` mirrors `install-argocd.sh`'s shape (pinned
 version, context confirmation prompt, static upstream manifest) but is
 kind-only: ingress-nginx has no IRSA/cloud dependency, so it doesn't need to

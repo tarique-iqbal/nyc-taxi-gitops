@@ -29,7 +29,7 @@ nyc-taxi-gitops/
     └── ingress/          # Grafana Ingress; base (AWS ALB) + overlays/local (ingress-nginx)
 ```
 
-Full reference docs, one per top-level directory: [`docs/bootstrap/README.md`](docs/bootstrap/README.md), [`docs/argocd/README.md`](docs/argocd/README.md), [`docs/kubernetes/README.md`](docs/kubernetes/README.md). This top-level README is the quick-start; those cover the *why* behind each manifest.
+Full reference docs, one per top-level directory: [`docs/bootstrap/README.md`](docs/bootstrap/README.md), [`docs/argocd/README.md`](docs/argocd/README.md), [`docs/kubernetes/README.md`](docs/kubernetes/README.md). This top-level README is the quick-start; those cover the *why* behind each manifest. [`docs/kind/README.md`](docs/kind/README.md) is the practical, single-place walkthrough for the local path specifically — prerequisites, day-to-day commands, and troubleshooting for the bugs three real runs against kind have caught.
 
 ## Bootstrap (one-time, per cluster)
 
@@ -45,7 +45,9 @@ kubectl apply -f bootstrap/root-application.yaml
 
 ```bash
 kind create cluster --config bootstrap/kind-config.yaml
-# build the app and kafka images in nyc-taxi (deployments/docker/{app,kafka}/Dockerfile), then:
+# from nyc-taxi's root -- note the differing build contexts, see docs/kind/README.md
+docker build -t app:local -f deployments/docker/app/Dockerfile .
+docker build -t kafka:local -f deployments/docker/kafka/Dockerfile deployments/docker/kafka
 kind load docker-image app:local --name <cluster>
 kind load docker-image kafka:local --name <cluster>
 bash bootstrap/install-argocd.sh
@@ -54,7 +56,7 @@ kubectl apply -f bootstrap/project.yaml
 kubectl apply -f bootstrap/root-application-local.yaml
 ```
 
-Grafana is then reachable at `http://localhost/` (`kind-config.yaml` maps container ports 80/443 to the host). Full detail on what differs from EKS: `docs/bootstrap/README.md#local-kind`.
+Grafana is then reachable at `http://localhost/` (`kind-config.yaml` maps container ports 80/443 to the host). Full step-by-step walkthrough, including troubleshooting: [`docs/kind/README.md`](docs/kind/README.md); design rationale for what differs from EKS: `docs/bootstrap/README.md#local-kind`.
 
 After either bootstrap, everything under `argocd/` and `kubernetes/` is reconciled
 automatically by the root app-of-apps — no further `kubectl apply` needed
